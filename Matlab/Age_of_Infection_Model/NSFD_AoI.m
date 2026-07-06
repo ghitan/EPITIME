@@ -260,10 +260,10 @@ if nargin == 2 && isstruct(args{1})   % Structured input
         warning('Missing inputs. Default values will be used for: %s.', ...
                 strjoin(missing_fields, ', '));
     end
+else
     %==========================|
     % Positional input         |
     %==========================|
-else
     AoI_problem = defaults;
     n_given = min(length(args), numel(fields));
     for k = 1:n_given
@@ -363,3 +363,7 @@ if isfield(AoI_problem, 'phi0') && ...
     end
 end
 end
+
+% ==============================================================================
+% End of NSFD_AoI.m
+% ==============================================================================

@@ -21,7 +21,8 @@
 % License:    GNU GPL v.3
 % Repository: https://github.com/ghitan/EPITIME
 
-clearvars; clc; close all;
+close all; clearvars; clc;
+fprintf('\nEPITIME AoI: simple example of using the NSFD_AoI function...')
 
 % OPTION 1: STRUCTURED INPUT_________________________________________________
 % AoI_problem = struct();                                                  %|
@@ -81,3 +82,9 @@ elseif exist('A', 'var') || exist('A', 'file')
 else
     disp('Since the default kernel is employed, no plotting for A is shown.');
 end
+
+fprintf('\nDone.\n\n');
+
+% ==============================================================================
+% End of Simple_Example.m
+% ==============================================================================

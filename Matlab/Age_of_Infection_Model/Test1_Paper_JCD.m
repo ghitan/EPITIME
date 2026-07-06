@@ -14,6 +14,7 @@
 % Repository: https://github.com/ghitan/EPITIME
 
 clearvars; clc; close all;
+fprintf('\nEPITIME AoI: test 1: experimental order of convergence\n');
 
 %====================|
 % Problem definition |
@@ -40,16 +41,23 @@ AoI_problem.verbosity = 0;
 %====================|
 % Reference Solution |
 %====================|
+fprintf('\nComputing the reference solution...')
 [~, Y_ref, P_ref] = NSFD_AoI( AoI_problem );
 % [~, Y_ref, P_ref] = NSFD_AoI(S0, N, T, h_ref, beta, A, phi0);    % Alt. (2)
-fprintf(['The reference solution was computed in %.3f seconds with a' ...
-    'stepsize h = 2^%d = %.2e.\n'], P_ref.elapsed_time, log2(h_ref),h_ref);
+fprintf(['done.\nThe reference solution was computed in %.3f seconds with a' ...
+         'stepsize h = 2^%d = %.2e.\n'], P_ref.elapsed_time, log2(h_ref),h_ref);
 
 %================================|
 % Experimental Convergence Study |
 %================================|
 start_expn = 6; TestN = -log2(h_ref) -2 -start_expn;
 H = zeros(TestN,1);     S_err = zeros(TestN,1);   phi_err = zeros(TestN,1); 
+
+% Prepare the running echo to console
+Ndisp = max(1., TestN / 10.) * ( 1 : min(TestN, 10) )';
+k = 1;
+fprintf('\nConvergence study started...\n0%%..');
+
 for j = 1:TestN
     h_test = 2^-(j + start_expn);
     H(j) = h_test;
@@ -59,7 +67,11 @@ for j = 1:TestN
     zooming = 1:h_test/h_ref:size(Y_ref,2);
     S_err(j) = norm(Y_ref(1,zooming)-Y_test(1,:)) / norm(Y_test(1,:));
     phi_err(j) = norm(Y_ref(2,zooming)-Y_test(2,:)) / norm(Y_test(2,:));
+    % Display running iterations percentage
+    if ( j >= Ndisp(k) ), fprintf('%d%%..', fix(100. * Ndisp(k)/ TestN)); k = k + 1; end
 end
+fprintf('%c%c\nConvergence study finished.\n', char(8), char(8));
+
 OrderS   = log2(S_err(1:end-1) ./ S_err(2:end));
 OrderPhi = log2(phi_err(1:end-1) ./ phi_err(2:end));
 OrderS   = [0; OrderS];
@@ -69,10 +81,10 @@ OrderPhi = [0; OrderPhi];
 % Relative Errors and Experimental Order Table |
 %==============================================|
 fprintf('\n%-10s %-15s %-10s %-15s %-10s\n', 'h', 'RelError_S', 'Order_S',...
-    'RelError_phi', 'Order_phi');
+        'RelError_phi', 'Order_phi');
 for j = 1:length(H)
     fprintf('2^-%-7d %-15.3e %-10.2f %-15.3e %-10.2f\n', ...
-        j + start_expn, S_err(j), OrderS(j), phi_err(j), OrderPhi(j));
+            j + start_expn, S_err(j), OrderS(j), phi_err(j), OrderPhi(j));
 end
 
 %==============================|
@@ -92,3 +104,9 @@ loglog(H,H*shift*phi_err(end),':c','LineWidth',1.5);
 xlabel('h');     ylabel('E(h)');   axis square tight
 title('Relative Error on φ(t)');
 xticks(10.^(-5:-1)); yticks(10.^(-10:-1));
+
+fprintf('\nDone.\n\n');
+
+% ==============================================================================
+% End of Test1_Paper_JCD.m
+% ==============================================================================
