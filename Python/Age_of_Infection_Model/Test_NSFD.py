@@ -35,7 +35,10 @@ def run_test():
     phi0 = lambda x: (N - S0)*A(x)
     verbosity = 1
 
-    t, Y, P = NSFD_AoI(S0=S0, T=T, h=h, A=A, phi0=phi0, beta=beta, verbosity=verbosity)
+    t, Y, P = NSFD_AoI(S0 = S0, N = N, T = T, h = h, beta = beta, \
+                       A = A, phi0 = phi0, verbosity = verbosity)
+    # or, equivalently:
+    # t, Y, P = NSFD_AoI( problem = problem )
     
     plt.figure()
     plt.subplot(1, 2, 1)
@@ -53,4 +56,10 @@ def run_test():
     return t, Y, P
 
 if __name__ == "__main__":
+    print("\nExample of using the NSFD_AoI function...", end = '')
     t, Y, P = run_test()
+    print("done.\n")
+
+# ==============================================================================
+# End of Test_NSFD.py
+# ==============================================================================

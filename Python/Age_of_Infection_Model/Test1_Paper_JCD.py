@@ -17,6 +17,8 @@ from NSFD_AoI import NSFD_AoI
 # License:    GNU GPL v.3
 # Repository: https://github.com/ghitan/EPITIME
 
+print("\nEPITIME AoI: test 1: experimental order of convergence\n")
+
 #====================|
 # Problem definition |
 #====================|
@@ -36,19 +38,26 @@ h_ref = AoI_problem['h']
 #====================|
 # Reference Solution |
 #====================|
+print("Computing the reference solution...", end = "")
 _, Y_ref, P_ref = NSFD_AoI(problem=AoI_problem)
-print(f"The reference solution was computed in {P_ref['elapsed_time']:.3f} seconds with a stepsize h = {h_ref:.2e}.")
+print(f"done.\nThe reference solution was computed in {P_ref['elapsed_time']:.3f} seconds with a stepsize h = {h_ref:.2e}.")
 
 #================================|
 # Experimental Convergence Study |
 #================================|
-TestN = int(-np.log2(h_ref) - 2)
+start_expn = 6
+TestN = int(-np.log2(h_ref) - 2 - start_expn)
 H = []
 S_err = []
 Phi_err = []
 
+# Prepare the running echo to console
+Ndisp = max(1., TestN / 10.) * np.arange( min(TestN, 10) + 1. )
+k = 1
+print("\nConvergence study started...\n0%..", end = "")
+
 for j in range(1, TestN + 1):
-    h_test = 2**-j
+    h_test = 2**(- j - start_expn)
     H.append(h_test)
     AoI_test = AoI_problem.copy()
     AoI_test['h'] = h_test
@@ -57,6 +66,12 @@ for j in range(1, TestN + 1):
     S_err.append(np.linalg.norm(Y_ref[0, zooming] - Y_test[0, :]) / np.linalg.norm(Y_test[0, :]))
     Phi_err.append(np.linalg.norm(Y_ref[1, zooming] - Y_test[1, :]) / np.linalg.norm(Y_test[1, :]))
     del Y_test
+    # Display running iterations percentage
+    if ( j >= Ndisp[k] ):
+        print(f"{np.int32(100. * Ndisp[k] / TestN):d}%..", end = "")
+        k += 1
+
+print("done.\nConvergence study finished.")
 
 H = np.array(H)
 S_err = np.array(S_err)
@@ -93,3 +108,8 @@ ax2.set_title('Relative Error on φ(t)')
 ax2.set_aspect('equal', adjustable='box')
 plt.show()
 
+print("\nDone.\n\n")
+
+# ==============================================================================
+# End of Test1_Paper_JCD.py
+# ==============================================================================
