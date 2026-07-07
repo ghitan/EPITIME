@@ -27,9 +27,13 @@ labelfontsize  = 11;
 titlefontsize  = 13;
 legendfontsize = labelfontsize;
 
-%fontname = 'Palatino Linotype';   % Windows
- fontname = 'Palatino';          % macOS
-% fontname = 'URW Palladio L';     % Linux
+arcstr = computer('arch'); OS = lower( arcstr(1) );
+switch OS
+    case 'w', fontname = 'Palatino Linotype';   % Windows
+    case 'm', fontname = 'Palatino';            % macOS
+    case 'g', fontname = 'URW Palladio L';      % Linux (GLNX)
+    otherwise, warning('Unknown underlying operating system: %s', arcstr);
+end
 
 % -----------------------------
 % Figura
@@ -92,11 +96,15 @@ new_height = width_in * aspect;
 set(fh, 'Position', [pos(1) pos(2) new_width new_height]);
 
 % -----------------------------
-% Export vettoriale
+% Vector graphics export
 % -----------------------------
 fname = 'Test_JMB_beh_OSCI_trap.pdf';
 exportgraphics(fh, fname, ...
-    'BackgroundColor','none', ...
-    'Resolution',1200, ...
-    'ContentType','vector');
+               'BackgroundColor', 'none', ...
+               'Resolution', 1200, ...
+               'ContentType', 'vector');
 end
+
+% ==============================================================================
+% End of plotData.m
+% ==============================================================================
