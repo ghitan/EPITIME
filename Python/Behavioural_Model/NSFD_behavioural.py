@@ -1,6 +1,7 @@
 import numpy as np
 import time
 import warnings
+
 def NSFD_behavioural(*args, **kwargs):
     """
 NSFD_behavioural
@@ -25,16 +26,17 @@ The function supports two alternative input modes:
 
 1) The function has a structured input BEH_prob with the following optional fields:
 
-   T             : Final time of the integration                    [Default: 1000]
-   h             : Time step used for discretization                [Default: 1]
-   mu            : Natural death rate                               [Default: 1/(75*365)]
-   N             : Total population size                            [Default: 5e7]
-   S0            : Initial susceptible population                   [Default: 0.2*6e7]
-   A             : Infectivity function                             [Default: bb* t* exp(-(mu +ni).*t)]
-   betaM         : Inhibition function                              [Default: 1/((1 / N) + alpha* x)]
-   g             : Message function                                 [Default: x)]
-   K             : Memory kernel                                    [Default: a * exp(-a * x)]
-   verbosity     : 0 to suppress warnings, 1 to enable              [Default: 1]
+   T          : Final time of the integration                    [Default: 1000]
+   h          : Time step used for discretization                [Default: 1]
+   mu         : Natural death rate                               [Default: 1/(75*365)]
+   N          : Total population size                            [Default: 5e7]
+   S0         : Initial susceptible population                   [Default: 0.2*6e7]
+   A          : Infectivity function                             [Default: bb* t* exp(-(mu +ni).*t)]
+   betaM      : Inhibition function                              [Default: 1/((1 / N) + alpha* x)]
+   g          : Message function                                 [Default: x)]
+   K          : Memory kernel                                    [Default: a * exp(-a * x)]
+   compGamh   : Flag for automatic computation of cutoff index   [Default: 1]
+   verbosity  : 0 to suppress warnings, 1 to enable              [Default: 1]
 
    EXAMPLE: NSFD_behavioural(BEH_prob)
 
@@ -43,14 +45,14 @@ The function supports two alternative input modes:
    EXAMPLE: NSFD_behavioural(T, h, N, mu, S0, A, K, betaM, g, Verbosity)
 
 OUTPUT:
-t               : vector of time
-S =Y[0,:]       : numerical approximation of the solution S(t)
-F =Y[1,:]       : numerical approximation of the solution F(t)
-P               : (optional) dict containing performance metrics and resource usage:
-                  • elapsed_time   - total computation time [seconds]
-                  • steps_number   - number of time steps or iterations (Nt)
-                  • flops_number   - estimated number of floating-point operations
-                  • memory_bytes   - total memory used by key variables [bytes]
+t             : vector of time
+S = Y[0,:]    : numerical approximation of the solution S(t)
+F = Y[1,:]    : numerical approximation of the solution F(t)
+P             : (optional) dict containing performance metrics and resource usage:
+                • elapsed_time   - total computation time [seconds]
+                • steps_number   - number of time steps or iterations (Nt)
+                • flops_number   - estimated number of floating-point operations
+                • memory_bytes   - total memory used by key variables [bytes]
 
 _________________________________________________________________________________________
 The Python implementation is organized into logical Code Blocks,
@@ -101,80 +103,146 @@ ________________________________________________________________________________
 
     # ------------------- PCB:A | Default parameters and input processing -------------------
     defaults = {
-        'T': 1000,
-        'h': 1,
-        'N': 5e7,
-        'mu': 1/(75*365),
-        'S0': 0.2*5e7,
-        'A': None,
-        'K': None,
-        'betaM': None,
-        'g': None,
+        'T':         1000,
+        'h':         1,
+        'N':         5e7,
+        'mu':        1/(75*365),
+        'S0':        0.2*5e7,
+        'A':         None,
+        'K':         None,
+        'betaM':     None,
+        'g':         None,
+        'compGamh':  True,
         'verbosity': 1
     }
     # ----- Input parsing new -----
     BEH_prob = parse_input(defaults, *args, **kwargs)
 
     # ------------------- PCB:B | Time grid construction and memory allocation -------------------
-    start_time = time.time()
-    T = BEH_prob['T']
-    h = BEH_prob['h']
-    N = BEH_prob['N']
+    allocation_time = -time.time()
+    T  = BEH_prob['T']
+    h  = float(BEH_prob['h'])
+    N  = BEH_prob['N']
     mu = BEH_prob['mu']
     S0 = BEH_prob['S0'] / N
 
     ni_t = int(np.floor(T / h))
+    t = np.array([i * h for i in range(ni_t + 1)])
+    
     D = h
-    D_tilde = 0
-    t = np.arange(0, T+h, h)
-    if t[-1] != T:
-        D_tilde = T - ni_t * h
+    D_tilde = 0.0
+    
+    if abs(t[-1] - T) > 1e-12: 
+        D_tilde = T - t[-1]
         t = np.append(t, T)
+    else:
+        t[-1] = T  
+        
     Nt = len(t)
 
     # Memory allocation
     Y = np.zeros((2, Nt))
     M = np.zeros(Nt)
     betaM_vec = np.zeros(Nt)
-    g_vec = np.zeros(Nt)
+    g_vec     = np.zeros(Nt)
 
     # Initial conditions
-    Y[0,0] = S0
-    A_vec = BEH_prob['A'](t)
-    K_vec = BEH_prob['K'](t)
+    Y[0,0]   = S0
+    A_vec    = BEH_prob['A'](t)
+    K_vec    = BEH_prob['K'](t)
     f_0_cost = (1 - S0/N) * mu
-    F0_vec = f_0_cost * A_vec
-    Y[1,0] = F0_vec[0]
-    M0_vec = (1/N)*BEH_prob['g'](N*Y[1, 0]) * K_vec
-    M[0] = M0_vec[0]
+    F0_vec   = f_0_cost * A_vec
+    Y[1,0]   = F0_vec[0]
+    M0_vec   = (1/N)*BEH_prob['g'](N*Y[1, 0]) * K_vec
+    M[0]     = M0_vec[0]
 
-    allocation_time = time.time() - start_time
+    allocation_time += time.time()
 
     # ------------------- PCB:C | Input consistency check -------------------
     _check_input(BEH_prob, defaults, A_vec)
 
     # ------------------- PCB:D | NSFD weight definition and time-stepping ------------
-    start_weight = time.time()
-    Sum1 = np.sum(K_vec)
-    T_incr = T + h
-    incr = h * BEH_prob['K'](T_incr)
-    it_max = 0
-    Nt_2 = Nt**2
+    weight_definition_time = -time.time()
+
+    cutoffIndexComput_time = 0.0
     K_eval = Nt
-    while incr > 1e-11 and it_max < Nt_2:
-        Sum1 += incr
-        T_incr += h
-        incr = h * BEH_prob['K'](T_incr)
-        it_max += 1
-        K_eval += 1
-    gammah = 1 / (h * Sum1)
-    weight_definition_time = time.time() - start_weight
+
+    # ***** Added after referee report, round 1 ************************************
+    if BEH_prob['compGamh']:
+        cutoffIndexComput_time = -time.time()
+        epsAbs     = 1.0E-10; # absolute threshold for tail tolerance
+        Ctail      = 1.0E-04; # proportionality constant for discrete tail negligibility
+        epsTailh   = min(epsAbs, Ctail * h) # discrete tail negligibility threshold
+        blkLen     = int(max(50, np.ceil(1.0 / h))) # block length for discrete weights-sequence splitting
+        blkLenOrig = blkLen
+        blkSeqLen  = 3 # number of consecutive tail blocks satisfying tail negl. cond.
+
+        # Start by taking the last blkSeqLen blocks available in K_vec.
+        # If the prescribed block length is too large compared with the current
+        # history length Nt, a temporary reduced block size is used only for the
+        # initial tail-negligibility assessment.
+    
+        # Handle short histories: ensure that at least blkSeqLen blocks can be
+        # extracted from the available kernel samples.
+        if (blkLen * blkSeqLen > Nt):
+            blkLen = int(np.floor(Nt / blkSeqLen))
+            if BEH_prob['verbosity']:
+                warnings.warn(f"Insufficient history length Nt={Nt}. "
+                              f"Using temporary blkLen={blkLen} instead of {blkLenOrig} "
+                              "for the initial tail-negligibility check.")
+            reducedBlkLen = True
+        else:
+            reducedBlkLen = False
+    
+        extraTimeSteps = h * np.arange(1, blkLen + 1)
+        # compute these first blkSeqLen partial sums, because the values are 
+        # already available in K_vec
+        blkSum = K_vec[-blkLen * blkSeqLen:].reshape((blkLen, blkSeqLen), order='F').sum(axis=0)
+        # block sequence acceptance criteria:
+        # 1) blkSeqLen consecutive tail blocks satisfying blkSum(j) <= epsTailh
+        # 2) their sums are non-increasing, namely blkSum(j) <= blkSum(j-1)
+        found = (np.all(blkSum <= epsTailh) and np.all(np.diff(blkSum) <= 0.0))
+    
+        # Restore the prescribed block length for all subsequent tail extensions.
+        # The temporary reduction is used only to initialize the block sequence. 
+        if reducedBlkLen:
+            blkLen = blkLenOrig
+            extraTimeSteps = h * np.arange(1, blkLen + 1)
+            
+        Tstart = T
+        # The first blkSeqLen block sums have already been initialized from K_vec.
+        nBlks  = blkSeqLen
+        
+        while not found:
+            # Tail negligibility has not yet been detected.
+            # Extend the kernel support by one additional block.
+            K_vec_extra = BEH_prob['K'](Tstart + extraTimeSteps)
+            nBlks += 1
+            blkSum = np.append(blkSum, np.sum(K_vec_extra))
+            Tstart = Tstart + extraTimeSteps[-1]
+            # check both the negligibility and the non-increasing conditions of the
+            # last blkSeqLen blocks
+            found = np.all(blkSum[-blkSeqLen:] <= epsTailh) and \
+                    np.all(np.diff(blkSum[-blkSeqLen:]) <= 0.0)
+                    
+        if not found: 
+            warnings.warn("Unable to satisfy tail negligibility conditions")
+            
+        K_eval = K_eval + (nBlks - blkSeqLen) * blkLen
+        Sum1 = np.sum(blkSum) + np.sum(K_vec[:-blkSeqLen])
+        cutoffIndexComput_time += time.time()
+        gammah = 1.0 / (h * Sum1)
+    else:
+        gammah = 1.0
+    # ******************************************************************************
+
+    weight_definition_time += time.time()
 
 # =============================== Time iteration ===============================
-    start_step = time.time()
+    stepping_time = -time.time()
 
-    for n in range(Nt-1):
-        if D_tilde != 0 and n == Nt-2:
+    for n in range(Nt - 1):
+        if D_tilde != 0 and n == (Nt - 2):
             D = D_tilde
 
         betaM_val = BEH_prob['betaM'](N * M[n])
@@ -185,30 +253,28 @@ ________________________________________________________________________________
         betaM_vec[n] = N * betaM_val
         g_vec[n] = g_val
 
-        if n >= 1:
-          var1 = Y[0,1:n+1] * betaM_vec[0:n] * Y[1,0:n]
-          int1 = np.dot(A_vec[n:0:-1], var1)
-
-          int2 = np.dot(K_vec[n-1::-1], g_vec[0:n])
-        else:
-          int1 = 0.0
-          int2 = 0.0
+        var1 = Y[0, 1:n+2] * betaM_vec[0:n+1] * Y[1, 0:n+1]
+        
+        int1 = np.dot(A_vec[n+1:0:-1], var1)
+        int2 = np.dot(K_vec[n::-1], g_vec[0:n+1])
 
         Y[1, n+1] = F0_vec[n+1] + D * int1
-
         M[n+1] = M0_vec[n+1] + gammah * (1/N) * D * int2
 
-    stepping_time = time.time() - start_step
+    stepping_time += time.time()
     elapsed_time = allocation_time + weight_definition_time + stepping_time
 
     # ------------------- PCB:E | Performance metrics and diagnostics -------------------
-    flops_counter = np.sum(9 + 6*np.arange(1,Nt)) + 18*D
+    Nt_D = int(Nt - D) 
+    flops_counter = np.sum(9 + 6 * np.arange(1, Nt_D + 1)) + 18 * D
     memory_bytes = Y.nbytes + t.nbytes + A_vec.nbytes + F0_vec.nbytes
+    
     P = {}
     P['elapsed_time'] = elapsed_time
+    P['cutoff_time']  = cutoffIndexComput_time
     P['steps_number'] = Nt
-    P['flop_number'] = flops_counter
-    P['Kern_number'] = Nt + K_eval
+    P['flops_number'] = flops_counter
+    P['Kern_number']  = K_eval
     P['memory_bytes'] = memory_bytes
 
     return t, Y, P
@@ -216,36 +282,44 @@ ________________________________________________________________________________
 # =============================== AUXILIARY MODULES ===========================
 # ------------------- PCB:F | Auxiliary routine 1------------------
 def parse_input(defaults, *args, **kwargs):
-    """Parse and complete the BEH problem input."""
     BEH_prob = defaults.copy()
+    
+    param_order = ['T', 'h', 'N', 'mu', 'S0', 'A', 'K', 'betaM', 'g', 'compGamh', 'verbosity']
 
-    # Update from dict or positional arguments
-    if len(args) == 1 and isinstance(args[0], dict):
-        BEH_prob.update(args[0])
-    elif len(args) > 0:
-        keys = list(defaults.keys())
-        for k,arg in enumerate(args):
-            if k < len(keys) and arg is not None:
-                BEH_prob[keys[k]] = arg
-    BEH_prob.update(kwargs)
+    if len(args) > 0:
+        if isinstance(args[0], dict):
+            user_dict = args[0]
+            for key, val in user_dict.items():
+                if val is not None:
+                    BEH_prob[key] = val
+        else:
+            for i, val in enumerate(args):
+                if i < len(param_order) and val is not None:
+                    BEH_prob[param_order[i]] = val
 
-    verbosity = BEH_prob['verbosity']
+    for key, val in kwargs.items():
+        if val is not None:
+            BEH_prob[key] = val
 
-    # Default function definitions
+    for key, default_val in defaults.items():
+        val = BEH_prob.get(key)
+        if val is None or (isinstance(val, (list, np.ndarray)) and len(val) == 0):
+            BEH_prob[key] = default_val
+
     ni = 1/7
-    R0 = 20
-    bb = R0 * (BEH_prob['mu'] + ni)**2
-    # ----- Fill in missing fields with defaults -----
-    if BEH_prob['A'] is None:
-        BEH_prob['A'] = lambda x: bb * x * np.exp(-(BEH_prob['mu'] + ni)*x)
-    if BEH_prob['K'] is None:
+    bb = (20 / 5e7) * (BEH_prob['mu'] + ni)**2 
+    
+    if not callable(BEH_prob['A']):
+        BEH_prob['A'] = lambda t: bb * t * np.exp(-(BEH_prob['mu'] + ni) * t)
+    if not callable(BEH_prob['K']):
         a = 1/30
-        BEH_prob['K'] = lambda x: a * np.exp(-a*x)
-    if BEH_prob['betaM'] is None:
+        BEH_prob['K'] = lambda t: a * np.exp(-a * t)
+    if not callable(BEH_prob['betaM']):
         alpha = 8e3
-        BEH_prob['betaM'] = lambda x: 1 / ((1 / BEH_prob['N']) + alpha*x)
-    if BEH_prob['g'] is None:
+        BEH_prob['betaM'] = lambda x: 1.0 / (1.0 + alpha * x)
+    if not callable(BEH_prob['g']):
         BEH_prob['g'] = lambda x: x
+
     return BEH_prob
 
 # ------------------- PCB:G | Auxiliary routine 2------------------
@@ -275,3 +349,7 @@ def _check_input(BEH_prob, defaults, A_vec):
         raise ValueError("A_vec must be non-negative")
     if BEH_prob['N'] <= BEH_prob['S0']:
         raise ValueError("Invalid values: N must be greater than S0")
+
+# ==============================================================================
+# End of NSFD_behavioural.py
+# ==============================================================================
