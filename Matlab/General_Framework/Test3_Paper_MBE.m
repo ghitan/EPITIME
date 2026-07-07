@@ -22,6 +22,8 @@
 % License:    GNU GPL v.3
 % Repository: https://github.com/ghitan/EPITIME
 
+close all; clear; clc
+fprintf('\nEPITIME general: test 3: AoI with heterogeneous mixing\n');
 
 %====================|
 % Problem definition |
@@ -52,11 +54,14 @@ P0 = @(t)( zeros(size(t)) );                B = @(t)( zeros(size(t)) );
 BETA = [0.4/N(1), 0.6/N(2); 0.5/N(1), 0.5/N(2)];
 alpha = zeros(2,1);       c = zeros(2,1);           verbosity = 0;
 
+fprintf('\nComputing the solution...')
 [t,S,phi,P] = NSFD_Renewal(S0,phi0,P0,A,B,beta,BETA,alpha,c,h,T,verbosity);
+fprintf('done.\n')
 
 %========================|
 % Continuous  Final Size |
 %========================|
+fprintf('Computing the continuous final size...')
 Aint = arrayfun(@(i) integral(@(t) A(i, t), 0, inf), 1:2);
 FS_Function = @(x) [ ...
     log( S0(1) / x(1) ) - 5  * ( 0.4 / N(1) * (N(1) - x(1)) * Aint(1) ...
@@ -67,6 +72,7 @@ options = optimoptions('fsolve', 'FunctionTolerance', 1e-14, ...
     'StepTolerance', 1e-14, 'OptimalityTolerance', 1e-14, ...  
     'Display', 'off');      
 S_infty = fsolve(FS_Function, [1; 1], options);
+fprintf('done.\n')
 
 %================================|
 % Plots of the Numerical Soution |
@@ -91,6 +97,7 @@ title(sprintf('Group 2, h = %.2e', h));       xlabel('t');      axis tight;
 T = 100;  
 N_test = 4; final_size_num = zeros(size(S,1), N_test);
 error_norm = zeros(size(S,1), N_test);
+fprintf('Computing the numerical final size for different values of h:\n0%%');
 for j = 1:N_test
     h = 2^(-j)/10;
     [~,S,~,~] = NSFD_Renewal(S0,phi0,P0,A,B,beta,BETA,alpha,c,h,T,verbosity);
@@ -99,7 +106,10 @@ for j = 1:N_test
     error_S1 = S(1,end)-S_infty(1);
     error_S2 = S(2,end)-S_infty(2);
     error_norm(j) = norm(tmp);
+    % Display running iterations percentage
+    fprintf('..%d%%', 25*j);
 end
+fprintf(' done.\n');
 order_norm = log2(error_norm(1:end-1)./error_norm(2:end));
 
 %=================================================|
@@ -121,6 +131,8 @@ for j = 1:4
     end
 end
 
+fprintf('\nDone.\n\n');
 
-
-
+% ==============================================================================
+% End of Test3_Paper_MBE.m
+% ==============================================================================

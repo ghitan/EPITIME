@@ -1,4 +1,4 @@
-function [t, S, phi, P, Perf] = NSFD_Renewal(varargin)
+function [t, S, phi, P, Perf] = NSFD_Renewal( varargin )
 %                            NSFD Method 
 % Unconditionally Positive Non Standard Finite Difference (NSFD) scheme for
 % the solution of a comprehensive renewal framework which includes
@@ -321,3 +321,7 @@ if size(Renewal_Problem.BETA,1) ~= M || size(Renewal_Problem.BETA,2) ~= M
     error('Inconsistent size: BETA must be an M-by-M matrix.');
 end
 end
+
+% ==============================================================================
+% End of NSFD_Renewal.m
+% ==============================================================================

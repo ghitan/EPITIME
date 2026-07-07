@@ -20,6 +20,9 @@
 % License:    GNU GPL v.3
 % Repository: https://github.com/ghitan/EPITIME
 
+close all; clear; clc
+fprintf('\nEPITIME general: test 1: AoI with a low-regularity kernel\n');
+
 %====================|
 % Problem definition |
 %====================|
@@ -50,9 +53,9 @@ Ren_Problem.verbosity = 0;
 % T = 1e+2;       phi0 = @(n,t) (N-S0)*A(n,t);      P0 = @(t) zeros(size(t)); 
 % B = @(t) zeros(size(t));        BETA = 1;         alpha = 0;     c = 0;
 
-disp ('Computation of the solution in progress...')
+fprintf('\nComputing the solution...')
 [t, S, phi, P] = NSFD_Renewal( Ren_Problem );
-disp ('The numerical solution has been computed.')
+fprintf('done.\n')
 
 %==============================|
 % Continuous R₀ and Final Size |
@@ -78,3 +81,9 @@ scatter(t(end), S_infty, 'LineWidth', 2, ...
         MarkerEdgeColor = 'b',MarkerFaceColor = 'b');
 legend('S(t)','φ(t)','S(∞)'); xlabel('t')
 title(sprintf('NSFD Numerical Solution with h = %.2e', Ren_Problem.h))
+
+fprintf('\nDone.\n\n');
+
+% ==============================================================================
+% End of Test1_Paper_MBE.m
+% ==============================================================================

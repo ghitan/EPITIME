@@ -22,6 +22,8 @@
 % License:    GNU GPL v.3
 % Repository: https://github.com/ghitan/EPITIME
 
+close all; clear; clc
+fprintf('\nEPITIME general: test 2: AoI with symptomatic and asymptomatic infections\n');
 
 %====================|
 % Problem definition |
@@ -56,7 +58,9 @@ Ren_Problem.verbosity = 0;
 % P0 = @(t)( zeros(size(t)) ); B = @(t)( zeros(size(t)) );
 % BETA = ones(2,2);    alpha = zeros(2,1);     c = zeros(2,1);
 
+fprintf('\nComputing the solution...')
 [t, S, phi, P, Perf] = NSFD_Renewal( Ren_Problem );
+fprintf('done.\n')
 
 %=============================================================|
 % Number of symptomatic and asymptomatic infected individuals |
@@ -120,3 +124,8 @@ sgt = sgtitle(sprintf('NSFD Numerical Solution with h = %.2e', Ren_Problem.h));
 sgt.FontSize = 14;
 sgt.FontWeight = 'bold';
 
+fprintf('\nDone.\n\n');
+
+% ==============================================================================
+% End of Test2_Paper_MBE.m
+% ==============================================================================
