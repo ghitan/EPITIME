@@ -255,8 +255,8 @@ ________________________________________________________________________________
 
         var1 = Y[0, 1:n+2] * betaM_vec[0:n+1] * Y[1, 0:n+1]
         
-        int1 = np.dot(A_vec[n:0:-1], var1)
-        int2 = np.dot(K_vec[n-1::-1], g_vec[0:n])
+        int1 = np.dot(A_vec[n+1:0:-1], var1)
+        int2 = np.dot(K_vec[n::-1], g_vec[0:n+1])
 
         Y[1, n+1] = F0_vec[n+1] + D * int1
         M[n+1] = M0_vec[n+1] + gammah * (1/N) * D * int2
