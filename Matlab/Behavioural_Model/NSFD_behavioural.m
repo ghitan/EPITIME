@@ -234,7 +234,7 @@ if ( BEH_prob.compGamh )
     end
     K_eval = K_eval + (nBlks - blkSeqLen) * blkLen;
     % cutoffInd = K_eval
-    Sum1 = sum( blkSum ) + sum( K_vec(1 : (end-blkSeqLen)) );
+    Sum1 = sum( blkSum ) + sum( K_vec(1 : (end - blkSeqLen*blkLen )) );
     cutoffIndexComput_time = toc( cutoffIndexComput_time );
     gammah = 1.0 / (h * Sum1);
 else
